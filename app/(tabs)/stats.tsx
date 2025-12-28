@@ -6,14 +6,17 @@ import {
   ScrollView,
   RefreshControl,
   Share,
+  Alert,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfile } from '../../hooks/useProfile';
 import { useWaitItems } from '../../hooks/useWaitItems';
+import { useAuth } from '../../hooks/useAuth';
 import { StatCard } from '../../components/StatCard';
 import { ProgressBar } from '../../components/ProgressBar';
 import { Button } from '../../components/Button';
+import { isMockMode } from '../../lib/supabase';
 import {
   Colors,
   Spacing,
@@ -46,6 +49,7 @@ const getWhatElseCouldBuy = (amount: number) => {
 
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
+  const { signOut } = useAuth();
   const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
   const {
     items,
@@ -56,6 +60,24 @@ export default function StatsScreen() {
   } = useWaitItems();
 
   const loading = profileLoading || itemsLoading;
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await signOut();
+            router.replace('/(auth)/login');
+          },
+        },
+      ]
+    );
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -187,6 +209,25 @@ Try Wait!`;
           </View>
         )}
 
+        {/* Mock Mode Indicator */}
+        {isMockMode && (
+          <View style={styles.mockModeCard}>
+            <Text style={styles.mockModeEmoji}>🧪</Text>
+            <Text style={styles.mockModeTitle}>Test Mode</Text>
+            <Text style={styles.mockModeText}>
+              Data is stored locally. Set up Supabase for real persistence.
+            </Text>
+          </View>
+        )}
+
+        {/* Sign Out Button */}
+        <Button
+          title="Sign Out"
+          onPress={handleSignOut}
+          variant="ghost"
+          style={styles.signOutButton}
+        />
+
         {/* Bottom padding for tab bar */}
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -288,5 +329,32 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontWeight: '600',
     color: Colors.success,
+  },
+  mockModeCard: {
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+  },
+  mockModeEmoji: {
+    fontSize: 32,
+    marginBottom: Spacing.sm,
+  },
+  mockModeTitle: {
+    fontSize: FontSize.md,
+    fontWeight: '600',
+    color: '#fbbf24',
+    marginBottom: Spacing.xs,
+  },
+  mockModeText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  signOutButton: {
+    marginBottom: Spacing.xl,
   },
 });

@@ -1,8 +1,8 @@
 import 'react-native-url-polyfill/dist/polyfill';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { Database } from './database.types';
+import { mockSupabase } from './mockSupabase';
 
 const ExpoSecureStoreAdapter = {
   getItem: (key: string) => {
@@ -16,15 +16,35 @@ const ExpoSecureStoreAdapter = {
   },
 };
 
-// Replace these with your Supabase project credentials
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'YOUR_SUPABASE_URL';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+// Check if real Supabase credentials are configured
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: ExpoSecureStoreAdapter as any,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
-});
+const USE_MOCK = !supabaseUrl || !supabaseAnonKey ||
+  supabaseUrl === 'YOUR_SUPABASE_URL' ||
+  supabaseAnonKey === 'YOUR_SUPABASE_ANON_KEY';
+
+// Log which mode we're using
+if (USE_MOCK) {
+  console.log('🧪 Running in MOCK MODE - data stored locally');
+} else {
+  console.log('🔗 Connected to Supabase');
+}
+
+// Create real Supabase client or use mock
+const realSupabase = USE_MOCK
+  ? null
+  : createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
+      auth: {
+        storage: ExpoSecureStoreAdapter as any,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    });
+
+// Export the appropriate client
+export const supabase = (USE_MOCK ? mockSupabase : realSupabase) as any;
+
+// Export flag to check if using mock
+export const isMockMode = USE_MOCK;
